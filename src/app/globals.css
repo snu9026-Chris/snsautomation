@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ── Tailwind Theme ── */
+@theme inline {
+  --font-sans: 'Pretendard', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-pearl-50: #fefefe;
+  --color-pearl-100: #f8f8fa;
+  --color-pearl-200: #f0f0f4;
+  --color-pearl-300: #e4e4ec;
+
+  --color-platform-youtube: #FF0000;
+  --color-platform-instagram: #E4405F;
+  --color-platform-threads: #000000;
+  --color-platform-tiktok: #00F2EA;
+  --color-platform-x: #000000;
+
+  --color-status-success: #4ade80;
+  --color-status-error: #f87171;
+  --color-status-pending: #9ca3af;
+}
+
+/* ── Base ── */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Pretendard', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  min-width: 1280px;
+}
+
+/* ── Pearl Shimmer Animation ── */
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.pearl-shimmer {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 25%,
+    rgba(240, 240, 245, 0.8) 50%,
+    rgba(255, 255, 255, 0.6) 75%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+.pearl-card {
+  position: relative;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.pearl-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    #e0e0f0,
+    #ffffff,
+    #e0d4f5,
+    #ffffff,
+    #e0e0f0
+  );
+  background-size: 300% 300%;
+  animation: shimmer 8s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Marquee (전광판) Animation ── */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+
+.marquee-track {
+  animation: marquee-scroll 12s linear infinite;
+  width: max-content;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Header Pearl Border ── */
+.header-pearl-border {
+  position: relative;
+}
+
+.header-pearl-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #c7c3f7,
+    #a78bfa,
+    #c7c3f7,
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}

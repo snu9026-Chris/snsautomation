@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/quota/reset",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/scheduled/publish",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
