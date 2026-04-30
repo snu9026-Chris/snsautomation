@@ -13,7 +13,7 @@ import { usePlatforms } from '@/lib/context/PlatformsContext';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 function AccountsContent() {
-  const { platforms, loading, refresh } = usePlatforms();
+  const { platforms, loading, error, refresh } = usePlatforms();
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const searchParams = useSearchParams();
 
@@ -59,6 +59,34 @@ function AccountsContent() {
           <Card key={i} className="h-20 animate-pulse bg-gray-50" />
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">플랫폼 정보를 불러오지 못했습니다</p>
+            <p className="text-xs text-red-600 mt-1 break-all">{error}</p>
+            <Button variant="ghost" size="sm" onClick={() => refresh()} className="mt-3">
+              다시 시도
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (platforms.length === 0) {
+    return (
+      <Card className="text-center py-8">
+        <p className="text-sm text-gray-400">플랫폼 정보가 없습니다.</p>
+        <Button variant="ghost" size="sm" onClick={() => refresh()} className="mt-3">
+          새로고침
+        </Button>
+      </Card>
     );
   }
 

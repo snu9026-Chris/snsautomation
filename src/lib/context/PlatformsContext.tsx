@@ -26,7 +26,7 @@ export function usePlatforms() {
 export function PlatformsProvider({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAuth();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
 
@@ -39,6 +39,7 @@ export function PlatformsProvider({ children }: { children: React.ReactNode }) {
         const data = await getPlatforms();
         setPlatforms(data);
       } catch (err) {
+        console.error('[PlatformsContext] fetch failed:', err);
         setError(err instanceof Error ? err.message : 'Failed to load platforms');
       } finally {
         setLoading(false);
@@ -52,6 +53,7 @@ export function PlatformsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isLoggedIn) {
       setPlatforms([]);
+      setLoading(false);
       return;
     }
     void refresh();

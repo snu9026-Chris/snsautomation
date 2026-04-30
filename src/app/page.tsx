@@ -16,7 +16,7 @@ import { Upload, Sparkles } from 'lucide-react';
 import type { PublishLog } from '@/types';
 
 export default function DashboardPage() {
-  const { platforms, loading: platformsLoading } = usePlatforms();
+  const { platforms, loading: platformsLoading, error: platformsError, refresh: refreshPlatforms } = usePlatforms();
   const [logs, setLogs] = useState<PublishLog[]>([]);
   const [apiUsage, setApiUsage] = useState<{ service: string; used: number; total: number }[]>([]);
   const [gptBalance, setGptBalance] = useState<{ totalUsageUsd?: number } | null>(null);
@@ -66,6 +66,16 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {platformsError && (
+        <Card className="mb-6 border-red-200 bg-red-50">
+          <p className="text-sm font-semibold text-red-700">플랫폼 정보를 불러오지 못했습니다</p>
+          <p className="text-xs text-red-600 mt-1 break-all">{platformsError}</p>
+          <Button variant="ghost" size="sm" onClick={() => refreshPlatforms()} className="mt-3">
+            다시 시도
+          </Button>
+        </Card>
+      )}
 
       {/* SNS 연결 상태 카드 */}
       <section className="mb-8">
