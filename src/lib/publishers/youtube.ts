@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { ensureValidToken } from '@/lib/services/token-refresh';
 
 interface YouTubePublishParams {
   mediaUrl: string;
@@ -14,45 +9,9 @@ interface YouTubePublishParams {
   firstComment?: string;
 }
 
-async function getYouTubeToken() {
-  const { data } = await supabase
-    .from('platforms')
-    .select('oauth_token, refresh_token')
-    .eq('id', 'youtube')
-    .single();
-
-  if (!data?.oauth_token) throw new Error('YouTube not connected');
-
-  // Google access token은 1시간 만료 → refresh token으로 갱신
-  if (data.refresh_token) {
-    const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: data.refresh_token,
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      }),
-    });
-    const refreshData = await refreshRes.json();
-
-    if (refreshData.access_token) {
-      // DB에 새 토큰 저장
-      await supabase
-        .from('platforms')
-        .update({ oauth_token: refreshData.access_token })
-        .eq('id', 'youtube');
-      return refreshData.access_token;
-    }
-  }
-
-  return data.oauth_token;
-}
-
 export async function publishToYouTube(params: YouTubePublishParams) {
   const { mediaUrl, title, description, categoryId = '22', privacyStatus = 'public', firstComment } = params;
-  const accessToken = await getYouTubeToken();
+  const accessToken = await ensureValidToken('youtube');
 
   // Step 1: 영상 파일 다운로드
   const videoRes = await fetch(mediaUrl);

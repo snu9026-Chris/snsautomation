@@ -2,27 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  TrendingUp,
-  Upload,
-  Calendar,
-  Film,
-  History,
-  Link as LinkIcon,
-} from 'lucide-react';
 import { NAV_ITEMS } from '@/lib/constants';
 import SidebarMascot from '@/components/layout/SidebarMascot';
+import {
+  IconDashboard, IconTrend, IconPublish, IconCalendar,
+  IconFilm, IconHistory, IconAccounts,
+} from '@/components/icons/SidebarIcons';
 import clsx from 'clsx';
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
-  LayoutDashboard,
-  TrendingUp,
-  Upload,
-  Calendar,
-  Film,
-  History,
-  Link: LinkIcon,
+  LayoutDashboard: IconDashboard,
+  TrendingUp: IconTrend,
+  Upload: IconPublish,
+  Calendar: IconCalendar,
+  Film: IconFilm,
+  History: IconHistory,
+  Link: IconAccounts,
 };
 
 export default function Sidebar() {
@@ -57,7 +52,7 @@ export default function Sidebar() {
                 {active && (
                   <div className="absolute left-0 w-1 h-7 rounded-r bg-gradient-to-b from-indigo-400 to-violet-500" />
                 )}
-                {Icon && <Icon className={clsx('w-6 h-6', active ? 'text-indigo-500' : 'text-gray-400')} />}
+                {Icon && <Icon className="w-6 h-6" />}
                 <span>{item.label}</span>
               </Link>
             </div>

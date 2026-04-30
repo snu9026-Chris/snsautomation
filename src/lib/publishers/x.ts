@@ -1,58 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { ensureValidToken } from '@/lib/services/token-refresh';
 
 interface XPublishParams {
   text: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   firstComment?: string;
-}
-
-async function getXToken() {
-  const { data } = await supabase
-    .from('platforms')
-    .select('oauth_token, refresh_token')
-    .eq('id', 'x')
-    .single();
-
-  if (!data?.oauth_token) throw new Error('X not connected');
-
-  // X OAuth 2.0 token 갱신
-  if (data.refresh_token) {
-    const refreshRes = await fetch('https://api.x.com/2/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(
-          `${process.env.X_CLIENT_ID}:${process.env.X_CLIENT_SECRET}`
-        ).toString('base64')}`,
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: data.refresh_token,
-        client_id: process.env.X_CLIENT_ID!,
-      }),
-    });
-    const refreshData = await refreshRes.json();
-
-    if (refreshData.access_token) {
-      await supabase
-        .from('platforms')
-        .update({
-          oauth_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || data.refresh_token,
-        })
-        .eq('id', 'x');
-      return refreshData.access_token;
-    }
-  }
-
-  return data.oauth_token;
 }
 
 async function uploadMediaToX(accessToken: string, mediaUrl: string, mediaType: string) {
@@ -156,7 +108,7 @@ async function uploadMediaToX(accessToken: string, mediaUrl: string, mediaType: 
 
 export async function publishToX(params: XPublishParams) {
   const { text, mediaUrl, mediaType, firstComment } = params;
-  const accessToken = await getXToken();
+  const accessToken = await ensureValidToken('x');
 
   const tweetBody: Record<string, unknown> = { text };
 

@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { OAUTH_CONFIGS, OAUTH_REDIRECT_URI } from '@/lib/oauth-config';
 import type { OAuthPlatform } from '@/lib/oauth-config';
+import { buildOAuthStateCookie, requireAuth } from '@/lib/auth';
 import crypto from 'crypto';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ platform: string }> }
 ) {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { platform } = await params;
 
   const config = OAUTH_CONFIGS[platform as OAuthPlatform];
@@ -45,5 +49,7 @@ export async function GET(
   }
 
   const redirectUrl = `${config.authUrl}?${authParams.toString()}`;
-  return NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(redirectUrl);
+  response.cookies.set(buildOAuthStateCookie(state));
+  return response;
 }

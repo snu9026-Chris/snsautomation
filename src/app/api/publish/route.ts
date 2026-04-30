@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { publishToPlatform } from '@/lib/publishers';
+import { publishToPlatform, type TikTokPublishOptions } from '@/lib/publishers';
+import { requireAuth } from '@/lib/auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,9 @@ const supabase = createClient(
 );
 
 export async function POST(request: Request) {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     const { platforms, mediaUrls, mediaType, platformData } = body;
@@ -51,7 +55,13 @@ export async function POST(request: Request) {
     // 3. 각 플랫폼에 직접 발행
     const results = await Promise.allSettled(
       platforms.map(async (pid: string) => {
-        const pData = platformData[pid] || {};
+        const pData = (platformData[pid] || {}) as {
+          title?: string;
+          description?: string;
+          firstComment?: string;
+          instagramFormat?: 'image' | 'video' | 'reel' | 'post';
+          tiktokOptions?: TikTokPublishOptions;
+        };
         const result = await publishToPlatform({
           platform: pid,
           mediaUrl: mediaUrls[0],
@@ -61,7 +71,7 @@ export async function POST(request: Request) {
           firstComment: pData.firstComment,
           instagramFormat: pData.instagramFormat,
           tiktokOptions: pData.tiktokOptions,
-        } as Parameters<typeof publishToPlatform>[0] & { instagramFormat?: string; tiktokOptions?: Record<string, unknown> });
+        });
 
         // DB 업데이트
         await supabase

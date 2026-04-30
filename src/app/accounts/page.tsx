@@ -6,15 +6,14 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { ConnectionBadge } from '@/components/ui/Badge';
 import PlatformIcon from '@/components/icons/PlatformIcon';
-import { getPlatforms, updatePlatformStatus } from '@/lib/queries';
+import { updatePlatformStatus } from '@/lib/queries';
 import { PLATFORM_CONFIG } from '@/lib/constants';
 import { daysUntil, formatDate } from '@/lib/utils';
-import type { Platform } from '@/types';
+import { usePlatforms } from '@/lib/context/PlatformsContext';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 function AccountsContent() {
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { platforms, loading, refresh } = usePlatforms();
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const searchParams = useSearchParams();
 
@@ -27,16 +26,12 @@ function AccountsContent() {
       const name = PLATFORM_CONFIG[connected as keyof typeof PLATFORM_CONFIG]?.name || connected;
       setToast({ type: 'success', message: `${name} 계정이 연결되었습니다.` });
       window.history.replaceState({}, '', '/accounts');
+      void refresh();
     } else if (error) {
       setToast({ type: 'error', message: `연결 실패: ${decodeURIComponent(error)}` });
       window.history.replaceState({}, '', '/accounts');
     }
-
-    getPlatforms().then((data) => {
-      setPlatforms(data);
-      setLoading(false);
-    });
-  }, [searchParams]);
+  }, [searchParams, refresh]);
 
   // 토스트 자동 해제
   useEffect(() => {
@@ -52,8 +47,7 @@ function AccountsContent() {
 
   const disconnectPlatform = async (id: string) => {
     await updatePlatformStatus(id, 'disconnected');
-    const updated = await getPlatforms();
-    setPlatforms(updated);
+    await refresh();
     const name = PLATFORM_CONFIG[id as keyof typeof PLATFORM_CONFIG]?.name || id;
     setToast({ type: 'success', message: `${name} 연결이 해제되었습니다.` });
   };

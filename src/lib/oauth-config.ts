@@ -23,6 +23,7 @@ export const OAUTH_CONFIGS: Record<OAuthPlatform, OAuthConfig> = {
       'https://www.googleapis.com/auth/youtube.upload',
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/photospicker.mediaitems.readonly',
     ],
     clientIdEnv: 'GOOGLE_CLIENT_ID',
     clientSecretEnv: 'GOOGLE_CLIENT_SECRET',

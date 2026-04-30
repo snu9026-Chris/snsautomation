@@ -11,13 +11,24 @@ export type PublishResult = {
   errorMessage?: string;
 };
 
-interface PublishParams {
+export interface TikTokPublishOptions {
+  privacyLevel?: 'PUBLIC_TO_EVERYONE' | 'MUTUAL_FOLLOW_FRIENDS' | 'FOLLOWER_OF_CREATOR' | 'SELF_ONLY';
+  disableComment?: boolean;
+  disableDuet?: boolean;
+  disableStitch?: boolean;
+  brandContentToggle?: boolean;
+  brandOrganicToggle?: boolean;
+}
+
+export interface PublishParams {
   platform: string;
   mediaUrl: string;
   mediaType: string;
   title?: string;
   description?: string;
   firstComment?: string;
+  instagramFormat?: 'image' | 'video' | 'reel' | 'post';
+  tiktokOptions?: TikTokPublishOptions;
 }
 
 export async function publishToPlatform(params: PublishParams): Promise<PublishResult> {
@@ -26,7 +37,7 @@ export async function publishToPlatform(params: PublishParams): Promise<PublishR
   try {
     switch (platform) {
       case 'instagram': {
-        const igFormat = (params as unknown as Record<string, unknown>).instagramFormat as string | undefined;
+        const igFormat = params.instagramFormat;
         let igMediaType: 'image' | 'video' | 'reel' = 'image';
         if (mediaType === 'video') {
           igMediaType = igFormat === 'post' ? 'video' : 'reel';
@@ -68,18 +79,10 @@ export async function publishToPlatform(params: PublishParams): Promise<PublishR
         if (mediaType !== 'video') {
           return { platform, status: 'failed', errorMessage: 'TikTok은 영상만 업로드 가능합니다.' };
         }
-        const tiktokOptions = (params as unknown as Record<string, unknown>).tiktokOptions as Record<string, unknown> | undefined;
         const result = await publishToTikTok({
           mediaUrl,
           title: description || title || '',
-          tiktokOptions: tiktokOptions ? {
-            privacyLevel: tiktokOptions.privacyLevel as string | undefined,
-            disableComment: tiktokOptions.disableComment as boolean | undefined,
-            disableDuet: tiktokOptions.disableDuet as boolean | undefined,
-            disableStitch: tiktokOptions.disableStitch as boolean | undefined,
-            brandContentToggle: tiktokOptions.brandContentToggle as boolean | undefined,
-            brandOrganicToggle: tiktokOptions.brandOrganicToggle as boolean | undefined,
-          } as Parameters<typeof publishToTikTok>[0]['tiktokOptions'] : undefined,
+          tiktokOptions: params.tiktokOptions,
         });
         return { platform, status: 'success', platformPostUrl: result.platformPostUrl };
       }

@@ -7,32 +7,35 @@ import Button from '@/components/ui/Button';
 import { ConnectionBadge, PublishBadge } from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
 import PlatformIcon from '@/components/icons/PlatformIcon';
-import { getPlatforms, getPublishLogs, getApiUsage } from '@/lib/queries';
+import { getPublishLogs, getApiUsage } from '@/lib/queries';
 import { PLATFORM_CONFIG } from '@/lib/constants';
 import { formatRelativeTime } from '@/lib/utils';
+import { usePlatforms } from '@/lib/context/PlatformsContext';
+import { api as apiClient } from '@/lib/services/api';
 import { Upload, Sparkles } from 'lucide-react';
-import type { Platform, PublishLog } from '@/types';
+import type { PublishLog } from '@/types';
 
 export default function DashboardPage() {
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const { platforms, loading: platformsLoading } = usePlatforms();
   const [logs, setLogs] = useState<PublishLog[]>([]);
   const [apiUsage, setApiUsage] = useState<{ service: string; used: number; total: number }[]>([]);
   const [gptBalance, setGptBalance] = useState<{ totalUsageUsd?: number } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [secondaryLoading, setSecondaryLoading] = useState(true);
+  const loading = platformsLoading || secondaryLoading;
 
   useEffect(() => {
-    Promise.all([
-      getPlatforms(),
-      getPublishLogs({ limit: 6 }),
-      getApiUsage(),
-    ]).then(([p, l, a]) => {
-      setPlatforms(p);
-      setLogs(l);
-      setApiUsage(a);
-      setLoading(false);
-    });
-    // GPT 잔액은 별도 (실패해도 무시)
-    fetch('/api/quota/balance').then((r) => r.ok ? r.json() : null).then(setGptBalance).catch(() => {});
+    Promise.all([getPublishLogs({ limit: 6 }), getApiUsage()])
+      .then(([l, a]) => {
+        setLogs(l);
+        setApiUsage(a);
+      })
+      .catch((err) => console.error('[dashboard] load failed:', err))
+      .finally(() => setSecondaryLoading(false));
+
+    apiClient
+      .get<{ totalUsageUsd?: number }>('/api/quota/balance')
+      .then(setGptBalance)
+      .catch((err) => console.warn('[dashboard] gpt balance unavailable:', err));
   }, []);
 
   if (loading) {

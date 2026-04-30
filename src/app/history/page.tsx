@@ -8,6 +8,7 @@ import PlatformIcon from '@/components/icons/PlatformIcon';
 import { getPublishLogs } from '@/lib/queries';
 import { PLATFORM_CONFIG } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
+import { api } from '@/lib/services/api';
 import type { PlatformId, PublishStatus, PublishLog, ScheduledPost } from '@/types';
 import { ExternalLink, RotateCcw, ChevronDown, ChevronUp, CalendarCheck, Clock, Send, X as XIcon } from 'lucide-react';
 import clsx from 'clsx';
@@ -51,25 +52,37 @@ export default function HistoryPage() {
     }
   }, [platformFilter, statusFilter, tab]);
 
-  // 예약 현황
+  // 예약 현황 — 최근 3개월
   const fetchScheduled = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/schedule?month=0&year=0'); // 전체 조회용
-      // 전체 조회: 최근 3개월
       const now = new Date();
-      const promises = [-1, 0, 1, 2].map(offset => {
+      const months = [-1, 0, 1, 2].map((offset) => {
         const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-        return fetch(`/api/schedule?month=${d.getMonth() + 1}&year=${d.getFullYear()}`).then(r => r.json());
+        return { month: d.getMonth() + 1, year: d.getFullYear() };
       });
-      const results = await Promise.all(promises);
-      const all = results.flat().filter(Array.isArray(results[0]) ? Boolean : () => false);
-      const merged = results.reduce((acc, arr) => Array.isArray(arr) ? [...acc, ...arr] : acc, [] as ScheduledPost[]);
-      // 중복 제거
-      const unique = merged.filter((post: ScheduledPost, i: number, arr: ScheduledPost[]) => arr.findIndex((p: ScheduledPost) => p.id === post.id) === i);
-      setScheduledPosts(unique.sort((a: ScheduledPost, b: ScheduledPost) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()));
-    } catch { /* ignore */ }
-    setLoading(false);
+      const results = await Promise.all(
+        months.map(({ month, year }) =>
+          api
+            .get<ScheduledPost[]>('/api/schedule', { searchParams: { month, year } })
+            .catch((err) => {
+              console.error(`[history] fetch ${year}-${month} failed:`, err);
+              return [] as ScheduledPost[];
+            })
+        )
+      );
+      const merged = results.flat();
+      const unique = merged.filter(
+        (post, i, arr) => arr.findIndex((p) => p.id === post.id) === i
+      );
+      setScheduledPosts(
+        unique.sort(
+          (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -80,35 +93,32 @@ export default function HistoryPage() {
   const handleManualPublish = async (post: ScheduledPost) => {
     setPublishing(post.id);
     try {
-      // 직접 발행 API 호출
-      const mainPlatform = post.platforms[0];
-      const mainData = post.platformData[mainPlatform];
-      const res = await fetch('/api/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platforms: post.platforms,
-          mediaUrls: post.mediaUrls,
-          mediaType: post.mediaType,
-          platformData: post.platformData,
-        }),
+      await api.post('/api/publish', {
+        platforms: post.platforms,
+        mediaUrls: post.mediaUrls,
+        mediaType: post.mediaType,
+        platformData: post.platformData,
       });
-      if (res.ok) {
-        // scheduled_posts 상태 업데이트
-        await fetch(`/api/schedule/${post.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'published' }),
-        }).catch(() => {});
-        fetchScheduled();
+      try {
+        await api.put(`/api/schedule/${post.id}`, { status: 'published' });
+      } catch (err) {
+        console.error('[history] schedule status update failed:', err);
       }
-    } catch { /* ignore */ }
-    setPublishing(null);
+      fetchScheduled();
+    } catch (err) {
+      console.error('[history] manual publish failed:', err);
+    } finally {
+      setPublishing(null);
+    }
   };
 
   // 예약 취소
   const handleCancel = async (id: string) => {
-    await fetch(`/api/schedule/${id}`, { method: 'DELETE' });
+    try {
+      await api.delete(`/api/schedule/${id}`);
+    } catch (err) {
+      console.error('[history] cancel failed:', err);
+    }
     fetchScheduled();
   };
 

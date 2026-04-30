@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { OAUTH_CONFIGS, OAUTH_REDIRECT_URI } from '@/lib/oauth-config';
 import type { OAuthPlatform } from '@/lib/oauth-config';
 import { createClient } from '@supabase/supabase-js';
+import { OAUTH_STATE_COOKIE_NAME, readOAuthStateCookie } from '@/lib/auth';
+import crypto from 'crypto';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +12,19 @@ const supabase = createClient(
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
+function redirectAndClearState(url: string) {
+  const response = NextResponse.redirect(url);
+  response.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+  return response;
+}
+
+function safeStateEquals(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
@@ -17,11 +32,17 @@ export async function GET(request: Request) {
   const error = searchParams.get('error');
 
   if (error) {
-    return NextResponse.redirect(`${BASE_URL}/accounts?error=${encodeURIComponent(error)}`);
+    return redirectAndClearState(`${BASE_URL}/accounts?error=${encodeURIComponent(error)}`);
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${BASE_URL}/accounts?error=missing_params`);
+    return redirectAndClearState(`${BASE_URL}/accounts?error=missing_params`);
+  }
+
+  // state CSRF 검증: 시작 시 쿠키에 저장한 값과 비교
+  const storedState = await readOAuthStateCookie();
+  if (!storedState || !safeStateEquals(storedState, state)) {
+    return redirectAndClearState(`${BASE_URL}/accounts?error=invalid_state`);
   }
 
   // state에서 platform 추출: "platform:random"
@@ -29,7 +50,7 @@ export async function GET(request: Request) {
   const config = OAUTH_CONFIGS[platform];
 
   if (!config) {
-    return NextResponse.redirect(`${BASE_URL}/accounts?error=unknown_platform`);
+    return redirectAndClearState(`${BASE_URL}/accounts?error=unknown_platform`);
   }
 
   const clientId = process.env[config.clientIdEnv]!;
@@ -72,7 +93,7 @@ export async function GET(request: Request) {
 
     if (!tokenRes.ok || tokenData.error) {
       console.error('Token exchange failed:', tokenData);
-      return NextResponse.redirect(
+      return redirectAndClearState(
         `${BASE_URL}/accounts?error=${encodeURIComponent(tokenData.error_description || tokenData.error || 'token_exchange_failed')}`
       );
     }
@@ -179,12 +200,12 @@ export async function GET(request: Request) {
 
     if (dbError) {
       console.error('DB update failed:', dbError);
-      return NextResponse.redirect(`${BASE_URL}/accounts?error=db_error`);
+      return redirectAndClearState(`${BASE_URL}/accounts?error=db_error`);
     }
 
-    return NextResponse.redirect(`${BASE_URL}/accounts?connected=${platform}`);
+    return redirectAndClearState(`${BASE_URL}/accounts?connected=${platform}`);
   } catch (err) {
     console.error('OAuth callback error:', err);
-    return NextResponse.redirect(`${BASE_URL}/accounts?error=callback_failed`);
+    return redirectAndClearState(`${BASE_URL}/accounts?error=callback_failed`);
   }
 }

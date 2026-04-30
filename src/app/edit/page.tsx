@@ -216,6 +216,7 @@ export default function EditPage() {
           rows={2}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
         />
+
       </Card>
 
       {/* 장면 목록 */}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/videos';
@@ -77,6 +78,9 @@ async function fetchViaSearch(category: string) {
 }
 
 export async function GET(request: Request) {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   if (!YOUTUBE_API_KEY) {
     return NextResponse.json({ error: 'YouTube API key not configured' }, { status: 500 });
   }

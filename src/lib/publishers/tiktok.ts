@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { ensureValidToken } from '@/lib/services/token-refresh';
 
 interface TikTokOptions {
   privacyLevel?: 'PUBLIC_TO_EVERYONE' | 'MUTUAL_FOLLOW_FRIENDS' | 'FOLLOWER_OF_CREATOR' | 'SELF_ONLY';
@@ -20,48 +15,10 @@ interface TikTokPublishParams {
   tiktokOptions?: TikTokOptions;
 }
 
-async function getTikTokToken() {
-  const { data } = await supabase
-    .from('platforms')
-    .select('oauth_token, refresh_token')
-    .eq('id', 'tiktok')
-    .single();
-
-  if (!data?.oauth_token) throw new Error('TikTok not connected');
-
-  // TikTok access token 갱신
-  if (data.refresh_token) {
-    const refreshRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: data.refresh_token,
-        client_key: process.env.TIKTOK_CLIENT_KEY!,
-        client_secret: process.env.TIKTOK_CLIENT_SECRET!,
-      }),
-    });
-    const refreshData = await refreshRes.json();
-
-    if (refreshData.access_token) {
-      await supabase
-        .from('platforms')
-        .update({
-          oauth_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || data.refresh_token,
-        })
-        .eq('id', 'tiktok');
-      return refreshData.access_token;
-    }
-  }
-
-  return data.oauth_token;
-}
-
 export async function publishToTikTok(params: TikTokPublishParams) {
   const { mediaUrl, title, tiktokOptions } = params;
   const opts = tiktokOptions || {};
-  const accessToken = await getTikTokToken();
+  const accessToken = await ensureValidToken('tiktok');
 
   // Step 1: 영상 파일 다운로드
   const videoRes = await fetch(mediaUrl);

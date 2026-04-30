@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   // OpenAI 잔액 조회 — /v1/dashboard/billing/credit_grants는 폐지됨
   // 대신 /v1/organization/costs 또는 /dashboard API 사용
   try {

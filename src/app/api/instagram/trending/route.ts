@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/lib/auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +22,9 @@ const HASHTAG_CATEGORIES: Record<string, string[]> = {
 };
 
 export async function GET(request: Request) {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category') || '전체';
   const customTag = searchParams.get('hashtag'); // 사용자 직접 입력

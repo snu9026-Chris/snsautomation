@@ -43,8 +43,13 @@ next-env.d.ts
 # claude code
 .claude/
 
+# dev history
+history.md
+
 # supabase temp
 supabase/.temp/
 
 # lottie assets (unused)
 public/lottie/
+
+.vercel

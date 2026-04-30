@@ -1,26 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { ensureValidToken } from '@/lib/services/token-refresh';
 
 interface InstagramPublishParams {
   mediaUrl: string;
   mediaType: 'image' | 'video' | 'reel';
   caption: string;
   firstComment?: string;
-}
-
-async function getInstagramToken() {
-  const { data } = await supabase
-    .from('platforms')
-    .select('oauth_token, refresh_token')
-    .eq('id', 'instagram')
-    .single();
-
-  if (!data?.oauth_token) throw new Error('Instagram not connected');
-  return data.oauth_token;
 }
 
 async function getInstagramAccountId(accessToken: string): Promise<string> {
@@ -45,7 +29,7 @@ async function getInstagramAccountId(accessToken: string): Promise<string> {
 
 export async function publishToInstagram(params: InstagramPublishParams) {
   const { mediaUrl, mediaType, caption, firstComment } = params;
-  const accessToken = await getInstagramToken();
+  const accessToken = await ensureValidToken('instagram');
   const igAccountId = await getInstagramAccountId(accessToken);
 
   // Step 1: Create media container

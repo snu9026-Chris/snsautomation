@@ -41,6 +41,7 @@ https://loopdrop.vercel.app/api/auth/callback
 
 **Scopes:**
 - `https://www.googleapis.com/auth/youtube.upload`
+- `https://www.googleapis.com/auth/youtube.force-ssl` ← **댓글 작성에 필수! 빠트리면 `insufficient authentication scopes` 에러**
 - `https://www.googleapis.com/auth/youtube.readonly`
 - `https://www.googleapis.com/auth/userinfo.profile`
 
@@ -49,6 +50,37 @@ https://loopdrop.vercel.app/api/auth/callback
 **주의사항:**
 - 앱이 테스트 모드면 **Test users**에 본인 계정 이메일 추가 필수 (Audience 탭)
 - `expires_in`이 3600(1시간)이지만 refresh token으로 계속 갱신 가능 → DB에 저장할 때 60일로 표시하는 게 UX 좋음
+
+**Loopify에서 겪은 YouTube 연동 에러 & 해결 (2026-04-24~25):**
+
+1. **댓글 작성 실패 — `Request had insufficient authentication scopes`**
+   - **원인:** OAuth scope에 `youtube.force-ssl`이 빠져있었음. `youtube.upload`만으로는 업로드만 가능하고 댓글은 못 씀.
+   - **해결:** scope에 `youtube.force-ssl` 추가 → YouTube 재연결 (새 scope로 토큰 재발급 필요)
+
+2. **댓글 작성 실패 — 브라우저 CORS 차단**
+   - **원인:** 브라우저에서 직접 `googleapis.com/youtube/v3/commentThreads`를 호출하면 CORS 에러. 업로드(Resumable Upload)는 CORS 허용되지만 댓글 API는 안 됨.
+   - **해결:** 댓글만 서버 경유 API Route (`/api/youtube/comment`)로 분리. 업로드는 브라우저 직접.
+
+3. **업로드 실패 — Vercel body 4.5MB 제한**
+   - **원인:** mp4 파일을 base64로 서버에 보내면 6~8MB → Vercel 제한 초과
+   - **해결:** 업로드를 브라우저에서 직접 YouTube API로 보냄 (서버는 토큰만 제공). 파일 크기 제한 없음.
+
+4. **업로드 직후 댓글 실패 — 영상 processing 중**
+   - **원인:** 업로드 직후에는 YouTube가 영상을 처리 중이라 댓글 API가 404 반환
+   - **해결:** 서버 댓글 API에서 최대 3회 재시도 (5초 간격 대기)
+
+5. **YouTube 연결 후 scope 변경 시 기존 토큰 무효**
+   - **원인:** scope를 추가하면 기존 refresh token으로 받은 access token에 새 scope가 없음
+   - **해결:** 반드시 `prompt=consent`로 재연결해서 새 토큰 발급 필요. 단순 refresh로는 안 됨.
+
+**최종 YouTube 업로드 구조 (Loopify 방식):**
+```
+브라우저:
+  1. GET /api/youtube/token → 서버에서 refresh된 access_token 반환
+  2. POST googleapis.com/.../videos?uploadType=resumable (init) ← 브라우저 직접
+  3. PUT {uploadUrl} with mp4 file body ← 브라우저 직접
+  4. POST /api/youtube/comment (videoId, comment) ← 서버 경유 (CORS 회피)
+```
 
 ---
 

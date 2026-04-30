@@ -105,10 +105,10 @@ export default function SceneCard({
           <button
             onClick={handleAiCaption}
             disabled={loadingAi}
-            className="px-2 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200 transition-all cursor-pointer disabled:opacity-40"
-            title="AI 자막 추천"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200 transition-all cursor-pointer disabled:opacity-40 text-xs font-medium"
           >
             {loadingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {loadingAi ? 'AI 추천 중...' : 'AI 자막 추천'}
           </button>
         </div>
 

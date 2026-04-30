@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { publishToPlatform } from '@/lib/publishers';
+import { publishToPlatform, type TikTokPublishOptions } from '@/lib/publishers';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,12 +70,12 @@ export async function GET(request: Request) {
           platform: pid,
           mediaUrl: mediaUrls[0] || '',
           mediaType,
-          title: pData.title as string || '',
-          description: pData.description as string || '',
-          firstComment: pData.firstComment as string || '',
-          instagramFormat: pData.instagramFormat,
-          tiktokOptions: pData.tiktokOptions,
-        } as Parameters<typeof publishToPlatform>[0] & { instagramFormat?: unknown; tiktokOptions?: unknown });
+          title: typeof pData.title === 'string' ? pData.title : '',
+          description: typeof pData.description === 'string' ? pData.description : '',
+          firstComment: typeof pData.firstComment === 'string' ? pData.firstComment : '',
+          instagramFormat: pData.instagramFormat as 'image' | 'video' | 'reel' | 'post' | undefined,
+          tiktokOptions: pData.tiktokOptions as TikTokPublishOptions | undefined,
+        });
 
         // publish_logs 업데이트
         await supabase

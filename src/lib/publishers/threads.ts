@@ -1,48 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { ensureValidToken } from '@/lib/services/token-refresh';
 
 interface ThreadsPublishParams {
   text: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
-}
-
-async function getThreadsToken() {
-  const { data } = await supabase
-    .from('platforms')
-    .select('oauth_token, expires_at')
-    .eq('id', 'threads')
-    .single();
-
-  if (!data?.oauth_token) throw new Error('Threads not connected');
-
-  // 만료 7일 전이면 장기 토큰 갱신 (60일 → 60일 연장)
-  const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : 0;
-  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-  if (expiresAt && expiresAt - Date.now() < sevenDays) {
-    try {
-      const refreshRes = await fetch(
-        `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${data.oauth_token}`
-      );
-      const refreshData = await refreshRes.json();
-      if (refreshData.access_token) {
-        const newExpiresAt = new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString();
-        await supabase
-          .from('platforms')
-          .update({ oauth_token: refreshData.access_token, expires_at: newExpiresAt })
-          .eq('id', 'threads');
-        return refreshData.access_token;
-      }
-    } catch (err) {
-      console.error('Threads token refresh failed:', err);
-    }
-  }
-
-  return data.oauth_token;
 }
 
 async function getThreadsUserId(accessToken: string): Promise<string> {
@@ -56,7 +17,7 @@ async function getThreadsUserId(accessToken: string): Promise<string> {
 
 export async function publishToThreads(params: ThreadsPublishParams) {
   const { text, mediaUrl, mediaType } = params;
-  const accessToken = await getThreadsToken();
+  const accessToken = await ensureValidToken('threads');
   const userId = await getThreadsUserId(accessToken);
 
   // Step 1: Create media container

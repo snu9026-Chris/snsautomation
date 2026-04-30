@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { PlatformsProvider } from '@/lib/context/PlatformsContext';
 import Header from '@/components/layout/Header';
 import AppShell from '@/components/layout/AppShell';
 import './globals.css';
@@ -30,8 +31,10 @@ export default function RootLayout({
       </head>
       <body className="h-full overflow-hidden">
         <AuthProvider>
-          <Header />
-          <AppShell>{children}</AppShell>
+          <PlatformsProvider>
+            <Header />
+            <AppShell>{children}</AppShell>
+          </PlatformsProvider>
         </AuthProvider>
       </body>
     </html>
