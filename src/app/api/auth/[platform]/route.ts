@@ -18,7 +18,8 @@ export async function GET(
     return NextResponse.json({ error: 'Unknown platform' }, { status: 400 });
   }
 
-  const clientId = process.env[config.clientIdEnv];
+  // .env 값 끝에 개행/공백이 붙어 OAuth URL에 %0A로 들어가는 사고 방지
+  const clientId = process.env[config.clientIdEnv]?.trim();
   if (!clientId) {
     return NextResponse.json(
       { error: `${platform} OAuth가 설정되지 않았습니다. ${config.clientIdEnv} 환경변수를 확인하세요.` },

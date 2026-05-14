@@ -53,8 +53,9 @@ export async function GET(request: Request) {
     return redirectAndClearState(`${BASE_URL}/accounts?error=unknown_platform`);
   }
 
-  const clientId = process.env[config.clientIdEnv]!;
-  const clientSecret = process.env[config.clientSecretEnv]!;
+  // .env 값 끝에 개행/공백이 붙어 토큰 교환 시 invalid_client 사고 방지
+  const clientId = process.env[config.clientIdEnv]!.trim();
+  const clientSecret = process.env[config.clientSecretEnv]!.trim();
 
   try {
     // 1. Authorization code → Access token 교환

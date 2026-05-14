@@ -12,7 +12,8 @@ interface OAuthConfig {
   userInfoUrl?: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+// .env 값 끝에 개행/공백이 붙어 redirect_uri 중간에 %0A가 끼는 사고 방지
+const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001').trim();
 export const OAUTH_REDIRECT_URI = `${BASE_URL}/api/auth/callback`;
 
 export const OAUTH_CONFIGS: Record<OAuthPlatform, OAuthConfig> = {
