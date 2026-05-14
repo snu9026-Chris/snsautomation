@@ -100,6 +100,7 @@ export async function GET(request: Request) {
     }
 
     let accessToken = tokenData.access_token;
+    let tokenExpiresIn: number | undefined = tokenData.expires_in;
     const refreshToken = tokenData.refresh_token || null;
 
     // Threads: 단기 토큰(1시간) → 장기 토큰(60일)으로 교환
@@ -111,17 +112,18 @@ export async function GET(request: Request) {
         const longLivedData = await longLivedRes.json();
         if (longLivedData.access_token) {
           accessToken = longLivedData.access_token;
+          // 장기 토큰의 만료 시각(보통 60일)을 사용
+          if (longLivedData.expires_in) tokenExpiresIn = longLivedData.expires_in;
         }
       } catch (err) {
         console.error('Threads long-lived token exchange failed:', err);
       }
     }
 
-    // Google returns expires_in=3600 (1hr) but refresh token allows indefinite renewal.
-    const rawExpiresIn = tokenData.expires_in || 5184000;
-    const expiresIn = (refreshToken && rawExpiresIn < 86400) || platform === 'threads'
-      ? 5184000  // refresh token 있거나 Threads면 60일로 표시
-      : rawExpiresIn;
+    // expires_at은 token-refresh 로직이 자동 갱신 시점 판단에 사용한다.
+    // 실제 access_token 만료 시각을 그대로 저장해야 5분 전 자동 갱신이 동작한다.
+    // (refresh_token 있으면 만료 직전에 자동으로 새 토큰 발급됨)
+    const expiresIn = tokenExpiresIn || (platform === 'threads' ? 5184000 : 3600);
 
     // 2. 사용자 정보 조회
     let accountName = `@${platform}_user`;
